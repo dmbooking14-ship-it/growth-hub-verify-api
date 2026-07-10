@@ -78,4 +78,3 @@ export async function verifyEmail(email) {
     reason: `All providers failed: ${errors.join('; ')}`
   };
 }
-
