@@ -1,0 +1,6 @@
+{
+  "name": "growth-hub-verify-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Serverless email verification endpoint for VerselSuite Growth Hub. Keeps provider API keys server-side."
+}
