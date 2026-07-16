@@ -13,11 +13,13 @@
 import { runLocalChecks } from './providers/localChecks.js';
 import { verifyWithMyEmailVerifier } from './providers/myEmailVerifier.js';
 import { verifyWithZeroBounce } from './providers/zeroBounce.js';
+import { verifyWithQuickEmailVerification } from './providers/quickEmailVerification.js';
 
 // Order = fallback priority. First one tried first.
 const PROVIDERS = [
   { name: 'myemailverifier', fn: verifyWithMyEmailVerifier },
-  { name: 'zerobounce', fn: verifyWithZeroBounce }
+  { name: 'zerobounce', fn: verifyWithZeroBounce },
+  { name: 'quickemailverification', fn: verifyWithQuickEmailVerification }
   // To add a provider: import its verify function above, then
   // add one line here: { name: 'newprovider', fn: verifyWithNewProvider }
 ];
