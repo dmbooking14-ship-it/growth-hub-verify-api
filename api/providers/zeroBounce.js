@@ -3,53 +3,77 @@
 //
 // Adapter for ZeroBounce's API. Same job as myEmailVerifier.js:
 // speak ZeroBounce's specific format, return OUR normalized shape.
-// This is the FALLBACK provider — only called if MyEmailVerifier
-// fails or errors.
 //
-// >>> PLACEHOLDER TO REPLACE: ZEROBOUNCE_API_KEY <<<
-// Reads from process.env.ZEROBOUNCE_API_KEY — set in Vercel's
-// dashboard, never hardcoded here.
+// Supports TWO accounts/keys for this provider, tried in order —
+// same pattern as myEmailVerifier.js.
+//
+// >>> PLACEHOLDERS TO REPLACE: ZEROBOUNCE_API_KEY_1, ZEROBOUNCE_API_KEY_2 <<<
+// Set in Vercel's dashboard, never hardcoded here.
 //
 // Docs: https://www.zerobounce.net/docs/email-validation-api-quickstart
 // (verify exact response field names against current docs)
 // ============================================================
 
-const API_KEY = process.env.ZEROBOUNCE_API_KEY;
+const KEYS = [
+  process.env.ZEROBOUNCE_API_KEY_1,
+  process.env.ZEROBOUNCE_API_KEY_2
+].filter(Boolean);
+
 const BASE_URL = 'https://api.zerobounce.net/v2/validate';
 
 /**
- * Calls ZeroBounce for one email address.
+ * Calls ZeroBounce for one email address, trying each configured
+ * key/account in order.
  * @param {string} email
  * @returns {Promise<object>} normalized verification result
- * @throws if the API call fails or the key is missing/invalid
+ * @throws if all configured keys fail
  */
 export async function verifyWithZeroBounce(email) {
-  if (!API_KEY) {
-    throw new Error('ZEROBOUNCE_API_KEY is not set');
+  if (KEYS.length === 0) {
+    throw new Error('No ZeroBounce API keys configured');
   }
 
-  const url = `${BASE_URL}?api_key=${API_KEY}&email=${encodeURIComponent(email)}`;
-  const response = await fetch(url);
+  const errors = [];
 
-  if (!response.ok) {
-    throw new Error(`ZeroBounce HTTP ${response.status}`);
+  for (let i = 0; i < KEYS.length; i++) {
+    const key = KEYS[i];
+    try {
+      const url = `${BASE_URL}?api_key=${key}&email=${encodeURIComponent(email)}`;
+      const response = await fetch(url);
+
+      if (response.status === 429) {
+        errors.push(`ZeroBounce key ${i + 1}: rate limited (429)`);
+        continue;
+      }
+
+      if (!response.ok) {
+        errors.push(`ZeroBounce key ${i + 1}: HTTP ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+
+      // Normalize ZeroBounce's response into our shared shape.
+      return {
+        provider: 'zerobounce',
+        email,
+        status: normalizeStatus(data.status),
+        syntaxValid: data.status !== 'invalid' || data.sub_status !== 'failed_syntax_check',
+        domainValid: data.sub_status !== 'invalid_domain',
+        mxValid: data.mx_found === 'true' || data.mx_found === true,
+        disposable: data.status === 'do_not_mail' && data.sub_status === 'disposable',
+        roleAddress: data.sub_status === 'role_based' || data.sub_status === 'role_based_catch_all',
+        score: data.status === 'valid' ? 95 : (data.status === 'catch-all' ? 55 : 20),
+        raw: data
+      };
+
+    } catch (err) {
+      errors.push(`ZeroBounce key ${i + 1}: ${err.message}`);
+      continue;
+    }
   }
 
-  const data = await response.json();
-
-  // Normalize ZeroBounce's response into our shared shape.
-  return {
-    provider: 'zerobounce',
-    email,
-    status: normalizeStatus(data.status),
-    syntaxValid: data.status !== 'invalid' || data.sub_status !== 'failed_syntax_check',
-    domainValid: data.sub_status !== 'invalid_domain',
-    mxValid: data.mx_found === 'true' || data.mx_found === true,
-    disposable: data.status === 'do_not_mail' && data.sub_status === 'disposable',
-    roleAddress: data.sub_status === 'role_based' || data.sub_status === 'role_based_catch_all',
-    score: data.status === 'valid' ? 95 : (data.status === 'catch-all' ? 55 : 20),
-    raw: data
-  };
+  throw new Error(`All ZeroBounce keys failed: ${errors.join('; ')}`);
 }
 
 function normalizeStatus(providerStatus) {

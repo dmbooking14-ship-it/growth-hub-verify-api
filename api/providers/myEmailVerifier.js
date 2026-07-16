@@ -6,57 +6,84 @@
 // results in OUR normalized shape so the rest of the app never
 // needs to know which provider actually answered.
 //
-// >>> PLACEHOLDER TO REPLACE: MYEMAILVERIFIER_API_KEY <<<
-// This file does NOT contain the key directly — it reads it from
-// process.env.MYEMAILVERIFIER_API_KEY, which you set in Vercel's
-// dashboard (Project Settings -> Environment Variables), never in
-// this file. See the README section "Environment Variables" for
-// exactly where to paste your real key.
+// Supports TWO accounts/keys for this provider (same pattern as
+// gemini.js's multi-key rotation) — tries key 1 first, falls back
+// to key 2 if it fails/hits its rate limit, before the manager one
+// level up (emailVerificationManager.js) falls through to a
+// different provider entirely.
+//
+// >>> PLACEHOLDERS TO REPLACE: MYEMAILVERIFIER_API_KEY_1, MYEMAILVERIFIER_API_KEY_2 <<<
+// Set in Vercel's dashboard (Project Settings -> Environment
+// Variables), never in this file.
 //
 // Docs: https://myemailverifier.com (verify exact endpoint/response
 // shape against their current docs when you sign up — API responses
 // occasionally change field names between provider versions).
 // ============================================================
 
-const API_KEY = process.env.MYEMAILVERIFIER_API_KEY;
+const KEYS = [
+  process.env.MYEMAILVERIFIER_API_KEY_1,
+  process.env.MYEMAILVERIFIER_API_KEY_2
+].filter(Boolean); // skips any key that isn't set, so partial setup doesn't crash
+
 const BASE_URL = 'https://client.myemailverifier.com/verifier/validate_single';
 
 /**
- * Calls MyEmailVerifier for one email address.
+ * Calls MyEmailVerifier for one email address, trying each
+ * configured key/account in order.
  * @param {string} email
  * @returns {Promise<object>} normalized verification result
- * @throws if the API call fails or the key is missing/invalid
+ * @throws if all configured keys fail
  */
 export async function verifyWithMyEmailVerifier(email) {
-  if (!API_KEY) {
-    throw new Error('MYEMAILVERIFIER_API_KEY is not set');
+  if (KEYS.length === 0) {
+    throw new Error('No MyEmailVerifier API keys configured');
   }
 
-  const url = `${BASE_URL}/${encodeURIComponent(email)}/${API_KEY}`;
-  const response = await fetch(url);
+  const errors = [];
 
-  if (!response.ok) {
-    throw new Error(`MyEmailVerifier HTTP ${response.status}`);
+  for (let i = 0; i < KEYS.length; i++) {
+    const key = KEYS[i];
+    try {
+      const url = `${BASE_URL}/${encodeURIComponent(email)}/${key}`;
+      const response = await fetch(url);
+
+      if (response.status === 429) {
+        errors.push(`MyEmailVerifier key ${i + 1}: rate limited (429)`);
+        continue;
+      }
+
+      if (!response.ok) {
+        errors.push(`MyEmailVerifier key ${i + 1}: HTTP ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+
+      // Normalize MyEmailVerifier's response into our shared shape.
+      // (Field names below match MyEmailVerifier's documented response
+      // as of integration time — re-check against live docs if this
+      // ever stops matching what they actually return.)
+      return {
+        provider: 'myemailverifier',
+        email,
+        status: normalizeStatus(data.Status),
+        syntaxValid: data.Syntax_Error === 'false' || data.Syntax_Error === false,
+        domainValid: data.Domain !== undefined && data['Do_You_Want_To_Continue'] !== 'no',
+        mxValid: data.MX_Record === 'true' || data.MX_Record === true,
+        disposable: data.Disposable_Domain === 'true' || data.Disposable_Domain === true,
+        roleAddress: data.Role_Based === 'true' || data.Role_Based === true,
+        score: data.Greylisted ? 50 : (data.Status === 'Valid' ? 95 : 20),
+        raw: data
+      };
+
+    } catch (err) {
+      errors.push(`MyEmailVerifier key ${i + 1}: ${err.message}`);
+      continue;
+    }
   }
 
-  const data = await response.json();
-
-  // Normalize MyEmailVerifier's response into our shared shape.
-  // (Field names below match MyEmailVerifier's documented response
-  // as of integration time — re-check against live docs if this
-  // ever stops matching what they actually return.)
-  return {
-    provider: 'myemailverifier',
-    email,
-    status: normalizeStatus(data.Status),
-    syntaxValid: data.Syntax_Error === 'false' || data.Syntax_Error === false,
-    domainValid: data.Domain !== undefined && data['Do_You_Want_To_Continue'] !== 'no',
-    mxValid: data.MX_Record === 'true' || data.MX_Record === true,
-    disposable: data.Disposable_Domain === 'true' || data.Disposable_Domain === true,
-    roleAddress: data.Role_Based === 'true' || data.Role_Based === true,
-    score: data.Greylisted ? 50 : (data.Status === 'Valid' ? 95 : 20),
-    raw: data
-  };
+  throw new Error(`All MyEmailVerifier keys failed: ${errors.join('; ')}`);
 }
 
 function normalizeStatus(providerStatus) {
