@@ -20,8 +20,30 @@ point of this setup. Keys live in exactly one place:
 
    | Name | Value |
    |---|---|
-   | `MYEMAILVERIFIER_API_KEY` | (your real MyEmailVerifier key) |
-   | `ZEROBOUNCE_API_KEY` | (your real ZeroBounce key) |
+   | `MYEMAILVERIFIER_API_KEY` | (your MyEmailVerifier key, account 1) |
+   | `MYEMAILVERIFIER_API_KEY_2` | (your MyEmailVerifier key, account 2) |
+   | `ZEROBOUNCE_API_KEY` | (your ZeroBounce key, account 1) |
+   | `ZEROBOUNCE_API_KEY_2` | (your ZeroBounce key, account 2) |
+   | `ABSTRACTAPI_EMAIL_KEY` | (your Abstract API email-validation key, account 1) |
+   | `ABSTRACTAPI_EMAIL_KEY_2` | (your Abstract API email-validation key, account 2) |
+   | `ZERUH_API_KEY` | (your Zeruh key, account 1) |
+   | `ZERUH_API_KEY_2` | (your Zeruh key, account 2) |
+
+   Note the naming: the first key of each provider has NO numeric
+   suffix (`MYEMAILVERIFIER_API_KEY`, not `..._KEY_1`) — this matches
+   however you already created these in Vercel. The second account
+   uses `_2`. Every provider file expects exactly this pattern.
+
+   You don't need all 8 filled in to start — each provider file
+   checks for both its keys and skips any that aren't set, so you
+   can add account 2 for each provider whenever it's ready (e.g.
+   once your partner creates theirs) without breaking anything.
+
+   QuickEmailVerification was removed from the fallback chain (it's
+   not actually free past a small trial) and replaced with Abstract
+   API and Zeruh, both genuinely free with no credit card required
+   at time of integration — re-check their pricing pages if you're
+   relying on this at real volume, since free-tier terms can change.
 
 5. Redeploy (Vercel usually prompts you to redeploy automatically
    after adding env vars — if not, trigger one manually from the
