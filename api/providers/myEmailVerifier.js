@@ -12,7 +12,7 @@
 // level up (emailVerificationManager.js) falls through to a
 // different provider entirely.
 //
-// >>> PLACEHOLDERS TO REPLACE: MYEMAILVERIFIER_API_KEY_1, MYEMAILVERIFIER_API_KEY_2 <<<
+// >>> PLACEHOLDERS TO REPLACE: MYEMAILVERIFIER_API_KEY, MYEMAILVERIFIER_API_KEY_2 <<<
 // Set in Vercel's dashboard (Project Settings -> Environment
 // Variables), never in this file.
 //
@@ -22,7 +22,7 @@
 // ============================================================
 
 const KEYS = [
-  process.env.MYEMAILVERIFIER_API_KEY_1,
+  process.env.MYEMAILVERIFIER_API_KEY,
   process.env.MYEMAILVERIFIER_API_KEY_2
 ].filter(Boolean); // skips any key that isn't set, so partial setup doesn't crash
 

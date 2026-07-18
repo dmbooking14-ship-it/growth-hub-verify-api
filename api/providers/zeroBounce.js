@@ -7,7 +7,7 @@
 // Supports TWO accounts/keys for this provider, tried in order —
 // same pattern as myEmailVerifier.js.
 //
-// >>> PLACEHOLDERS TO REPLACE: ZEROBOUNCE_API_KEY_1, ZEROBOUNCE_API_KEY_2 <<<
+// >>> PLACEHOLDERS TO REPLACE: ZEROBOUNCE_API_KEY, ZEROBOUNCE_API_KEY_2 <<<
 // Set in Vercel's dashboard, never hardcoded here.
 //
 // Docs: https://www.zerobounce.net/docs/email-validation-api-quickstart
@@ -15,7 +15,7 @@
 // ============================================================
 
 const KEYS = [
-  process.env.ZEROBOUNCE_API_KEY_1,
+  process.env.ZEROBOUNCE_API_KEY,
   process.env.ZEROBOUNCE_API_KEY_2
 ].filter(Boolean);
 
