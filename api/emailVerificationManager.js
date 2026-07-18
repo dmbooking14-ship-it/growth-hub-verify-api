@@ -13,13 +13,18 @@
 import { runLocalChecks } from './providers/localChecks.js';
 import { verifyWithMyEmailVerifier } from './providers/myEmailVerifier.js';
 import { verifyWithZeroBounce } from './providers/zeroBounce.js';
-import { verifyWithQuickEmailVerification } from './providers/quickEmailVerification.js';
+import { verifyWithAbstractApi } from './providers/abstractApi.js';
+import { verifyWithZeruh } from './providers/zeruh.js';
 
 // Order = fallback priority. First one tried first.
+// quickEmailVerification.js was replaced with Abstract API + Zeruh
+// (both genuinely free, no credit card) — the file is still present
+// in this folder but no longer imported/called anywhere.
 const PROVIDERS = [
   { name: 'myemailverifier', fn: verifyWithMyEmailVerifier },
   { name: 'zerobounce', fn: verifyWithZeroBounce },
-  { name: 'quickemailverification', fn: verifyWithQuickEmailVerification }
+  { name: 'abstractapi', fn: verifyWithAbstractApi },
+  { name: 'zeruh', fn: verifyWithZeruh }
   // To add a provider: import its verify function above, then
   // add one line here: { name: 'newprovider', fn: verifyWithNewProvider }
 ];
